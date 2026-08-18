@@ -9,6 +9,7 @@ import Purchases from './pages/Purchases';
 import Reports from './pages/Reports';
 import Advisor from './pages/Advisor';
 import Settings from './pages/Settings';
+import Admin from './pages/Admin';
 
 function PrivateRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" replace />;
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="purchases" element={<Purchases />} />
           <Route path="reports" element={<Reports />} />
           <Route path="advisor" element={<Advisor />} />
+          <Route path="admin" element={<Admin />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

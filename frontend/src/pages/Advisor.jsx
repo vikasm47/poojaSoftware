@@ -7,22 +7,35 @@ export default function Advisor() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState('');
+  const [error, setError] = useState('');
   const [tab, setTab] = useState('marketing');
 
-  function loadMarketing(refresh = false) {
+  async function loadMarketing(refresh = false) {
     setLoading('marketing');
-    api.getMarketingInsights(refresh)
-      .then(setMarketing)
-      .catch(console.error)
-      .finally(() => setLoading(''));
+    setError('');
+    try {
+      const data = await api.getMarketingInsights(refresh);
+      setMarketing(data);
+    } catch (err) {
+      setError(err.message);
+      setMarketing({ insights: 'Could not load marketing insights. Please try again.', offline: true });
+    } finally {
+      setLoading('');
+    }
   }
 
-  function loadInventory(refresh = false) {
+  async function loadInventory(refresh = false) {
     setLoading('inventory');
-    api.getInventoryInsights(refresh)
-      .then(setInventory)
-      .catch(console.error)
-      .finally(() => setLoading(''));
+    setError('');
+    try {
+      const data = await api.getInventoryInsights(refresh);
+      setInventory(data);
+    } catch (err) {
+      setError(err.message);
+      setInventory({ insights: 'Could not load inventory insights. Please try again.', offline: true });
+    } finally {
+      setLoading('');
+    }
   }
 
   useEffect(() => {
@@ -35,14 +48,28 @@ export default function Advisor() {
     if (!question.trim()) return;
     setLoading('ask');
     setAnswer(null);
+    setError('');
     try {
       const result = await api.askAdvisor(question);
       setAnswer(result);
     } catch (err) {
-      setAnswer({ answer: err.message, offline: true });
+      setAnswer({
+        answer: err.message || 'Something went wrong. Please try again.',
+        offline: true,
+      });
     } finally {
       setLoading('');
     }
+  }
+
+  function renderInsights(data, loadingKey) {
+    if (loading === loadingKey && !data) {
+      return <div className="empty-state" style={{ padding: '1.5rem' }}>Loading insights...</div>;
+    }
+    if (!data?.insights) {
+      return <div className="empty-state" style={{ padding: '1.5rem' }}>No insights available.</div>;
+    }
+    return <div className="markdown-content">{data.insights}</div>;
   }
 
   return (
@@ -50,7 +77,7 @@ export default function Advisor() {
       <div className="page-header">
         <div>
           <h1 className="page-title">AI Business Advisor</h1>
-          <p className="page-subtitle">Marketing and inventory insights powered by Claude</p>
+          <p className="page-subtitle">Marketing and inventory insights powered by Google Gemini</p>
         </div>
       </div>
 
@@ -65,6 +92,8 @@ export default function Advisor() {
         ))}
       </div>
 
+      {error && <div className="alert alert-error">{error}</div>}
+
       {tab === 'marketing' && (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -74,10 +103,12 @@ export default function Advisor() {
             </button>
           </div>
           {marketing?.offline && (
-            <div className="alert alert-info">Running in offline mode. Add ANTHROPIC_API_KEY to backend/.env for full AI insights.</div>
+            <div className="alert alert-info">
+              {marketing.apiError || 'Running in offline mode using your shop data. Add a Google API key in Admin → AI Settings.'}
+            </div>
           )}
           {marketing?.cached && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Cached insights (refreshes weekly)</p>}
-          <div className="markdown-content">{marketing?.insights || 'Loading...'}</div>
+          {renderInsights(marketing, 'marketing')}
         </div>
       )}
 
@@ -90,9 +121,11 @@ export default function Advisor() {
             </button>
           </div>
           {inventory?.offline && (
-            <div className="alert alert-info">Running in offline mode. Add ANTHROPIC_API_KEY to backend/.env for full AI insights.</div>
+            <div className="alert alert-info">
+              {inventory.apiError || 'Running in offline mode using your shop data. Add a Google API key in Admin → AI Settings.'}
+            </div>
           )}
-          <div className="markdown-content">{inventory?.insights || 'Loading...'}</div>
+          {renderInsights(inventory, 'inventory')}
         </div>
       )}
 

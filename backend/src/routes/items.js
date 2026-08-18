@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb, formatItem, getStockStatus } from '../db/database.js';
+import { getCategoryNames } from '../services/settingsService.js';
 import { config } from '../config.js';
 
 const router = Router();
@@ -20,6 +21,15 @@ const CATEGORIES = [
   'Camphor', 'Kumkum/Sindoor', 'Puja Kits', 'Miscellaneous',
 ];
 
+function getCategoriesList() {
+  try {
+    const names = getCategoryNames();
+    return names.length > 0 ? names : CATEGORIES;
+  } catch {
+    return CATEGORIES;
+  }
+}
+
 function getShopId() {
   const db = getDb();
   return db.prepare('SELECT id FROM shops LIMIT 1').get().id;
@@ -33,7 +43,7 @@ function generateSku(category, shopId) {
 }
 
 router.get('/categories', (_req, res) => {
-  res.json(CATEGORIES);
+  res.json(getCategoriesList());
 });
 
 router.get('/', (req, res) => {

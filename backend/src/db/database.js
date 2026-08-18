@@ -223,6 +223,22 @@ export async function initDatabase() {
       UNIQUE(shop_id, cache_key)
     );
 
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (shop_id) REFERENCES shops(id),
+      UNIQUE(shop_id, name)
+    );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_items_shop ON items(shop_id);
     CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
     CREATE INDEX IF NOT EXISTS idx_sales_shop_date ON sales(shop_id, sale_date);
@@ -231,7 +247,24 @@ export async function initDatabase() {
 
   persistDatabase();
   seedDefaultData();
+  seedCategories();
   return db;
+}
+
+function seedCategories() {
+  const shop = db.prepare('SELECT id FROM shops LIMIT 1').get();
+  if (!shop) return;
+
+  const count = db.prepare('SELECT COUNT(*) as c FROM categories WHERE shop_id = ?').get(shop.id).c;
+  if (count > 0) return;
+
+  const defaults = [
+    'Diyas', 'Incense', 'Idols', 'Thalis', 'Garlands',
+    'Camphor', 'Kumkum/Sindoor', 'Puja Kits', 'Miscellaneous',
+  ];
+  const insert = db.prepare('INSERT INTO categories (shop_id, name, sort_order) VALUES (?, ?, ?)');
+  defaults.forEach((name, i) => insert.run(shop.id, name, i));
+  persistDatabase();
 }
 
 function seedDefaultData() {

@@ -105,16 +105,23 @@ Restore: replace `vimms.db` in the data folder above and restart the app.
 
 ## AI Advisor (optional)
 
-For full AI marketing and inventory suggestions:
+For full AI marketing and inventory suggestions using **Google Gemini**:
 
-1. Get an API key from [Anthropic](https://console.anthropic.com/)
-2. Create a file `backend\.env` (development) with:
+1. Get a free API key at [Google AI Studio](https://aistudio.google.com/apikey)
+2. In VIMMS go to **Admin → AI Settings** and paste your key, OR add to `.env`:
    ```
-   ANTHROPIC_API_KEY=your-key-here
+   GOOGLE_API_KEY=AIza-your-key-here
+   GOOGLE_AI_MODEL=gemini-2.0-flash
    ```
-3. Restart the app
+3. Choose from available models: Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro, etc.
 
 Without an API key, the advisor still works in offline mode with basic suggestions.
+
+## Admin Panel
+
+Go to **Admin** in the sidebar to:
+- Add, edit, or delete **product categories**
+- Configure **Google API key** and **AI model**
 
 ---
 

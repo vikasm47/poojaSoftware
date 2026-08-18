@@ -99,6 +99,14 @@ export const api = {
   askAdvisor: (question) => request('/api/advisor/ask', { method: 'POST', body: JSON.stringify({ question }) }),
 
   backupUrl: () => `${API_BASE}/api/backup/export`,
+
+  // Admin
+  getAdminCategories: () => request('/api/admin/categories'),
+  createCategory: (name) => request('/api/admin/categories', { method: 'POST', body: JSON.stringify({ name }) }),
+  updateCategory: (id, name) => request(`/api/admin/categories/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+  deleteCategory: (id) => request(`/api/admin/categories/${id}`, { method: 'DELETE' }),
+  getAiSettings: () => request('/api/admin/ai-settings'),
+  saveAiSettings: (data) => request('/api/admin/ai-settings', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 export function formatINR(amount) {

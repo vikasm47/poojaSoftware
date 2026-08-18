@@ -13,6 +13,7 @@ import purchasesRoutes from './routes/purchases.js';
 import reportsRoutes from './routes/reports.js';
 import advisorRoutes from './routes/advisor.js';
 import backupRoutes from './routes/backup.js';
+import adminRoutes from './routes/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/purchases', authMiddleware, purchasesRoutes);
 app.use('/api/reports', authMiddleware, reportsRoutes);
 app.use('/api/advisor', authMiddleware, advisorRoutes);
 app.use('/api/backup', authMiddleware, backupRoutes);
+app.use('/api/admin', authMiddleware, adminRoutes);
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();

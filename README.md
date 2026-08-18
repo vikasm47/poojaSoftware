@@ -123,7 +123,7 @@ Without an API key, the advisor still works in offline mode with basic suggestio
 For developers who want to build the `.exe` on their own machine.
 
 ### Prerequisites
-- **Node.js 22.5 or newer** — [Download Node.js](https://nodejs.org/)
+- Node.js 18+ (development); packaged app includes its own runtime
 - npm (included with Node.js)
 - Git (optional, for cloning the repo)
 
@@ -208,7 +208,7 @@ npm run electron:dev
 | Problem | Solution |
 |---------|----------|
 | Windows blocks the installer | Click **More info** → **Run anyway** |
-| App won't start after install | Restart your PC; check antivirus isn't blocking VIMMS |
+| App won't launch / closes immediately | Reinstall using the latest `VIMMS Setup 1.0.0.exe` from `release\` folder. Check log at `%APPDATA%\VIMMS\vimms-startup.log` |
 | Forgot PIN | Delete `vimms.db` in the data folder (this resets all data) or restore from backup |
 | Blank screen on launch | Wait 10–15 seconds for the backend to start; then restart the app |
 | Build fails on `npm install` | Use Node.js 22.5+; run `npm install` separately in `backend` and `frontend` folders |

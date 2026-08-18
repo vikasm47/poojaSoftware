@@ -14,4 +14,5 @@ export const config = {
   defaultPin: process.env.DEFAULT_PIN || '1234',
   dataDir: process.env.DATA_DIR || path.join(__dirname, '../../data'),
   uploadsDir: process.env.UPLOADS_DIR || path.join(__dirname, '../../data/uploads'),
+  frontendDist: process.env.FRONTEND_DIST || path.join(__dirname, '../../frontend/dist'),
 };

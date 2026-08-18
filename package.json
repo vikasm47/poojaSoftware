@@ -24,6 +24,9 @@
     "directories": {
       "output": "release"
     },
+    "asarUnpack": [
+      "frontend/dist/**/*"
+    ],
     "files": [
       "electron/**/*",
       "backend/**/*",

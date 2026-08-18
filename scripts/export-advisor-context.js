@@ -28,10 +28,10 @@ function parseArgs() {
   return { outPath };
 }
 
-function main() {
+async function main() {
   const { outPath } = parseArgs();
 
-  initDatabase();
+  await initDatabase();
   const context = getAdvisorContext();
 
   const snapshot = {
@@ -51,4 +51,7 @@ function main() {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -1,20 +1,98 @@
-import { DatabaseSync } from 'node:sqlite';
+import initSqlJs from 'sql.js';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import bcrypt from 'bcryptjs';
 import { config } from '../config.js';
 
+const require = createRequire(import.meta.url);
+
 let db;
+let dbPath;
+let persistScheduled = false;
+
+function persistDatabase() {
+  if (!db || !dbPath) return;
+  const data = db.export();
+  fs.writeFileSync(dbPath, Buffer.from(data));
+}
+
+function schedulePersist() {
+  if (persistScheduled) return;
+  persistScheduled = true;
+  setImmediate(() => {
+    persistScheduled = false;
+    persistDatabase();
+  });
+}
+
+function createStatement(sql, nativePrepare) {
+  return {
+    get(...params) {
+      const stmt = nativePrepare(sql);
+      try {
+        if (params.length) stmt.bind(params);
+        if (stmt.step()) return stmt.getAsObject();
+        return undefined;
+      } finally {
+        stmt.free();
+      }
+    },
+    all(...params) {
+      const stmt = nativePrepare(sql);
+      const rows = [];
+      try {
+        if (params.length) stmt.bind(params);
+        while (stmt.step()) rows.push(stmt.getAsObject());
+        return rows;
+      } finally {
+        stmt.free();
+      }
+    },
+    run(...params) {
+      const stmt = nativePrepare(sql);
+      try {
+        if (params.length) stmt.bind(params);
+        stmt.step();
+        schedulePersist();
+        return {
+          lastInsertRowid: getLastInsertRowid(nativePrepare),
+          changes: db.getRowsModified(),
+        };
+      } finally {
+        stmt.free();
+      }
+    },
+  };
+}
+
+function getLastInsertRowid(nativePrepare) {
+  const stmt = nativePrepare('SELECT last_insert_rowid() AS id');
+  try {
+    stmt.step();
+    return stmt.getAsObject().id;
+  } finally {
+    stmt.free();
+  }
+}
 
 function wrapDb(database) {
+  const nativeExec = database.exec.bind(database);
+  const nativePrepare = database.prepare.bind(database);
+  database.prepare = (sql) => createStatement(sql, nativePrepare);
+  database.exec = (sql) => {
+    nativeExec(sql);
+    schedulePersist();
+  };
   database.transaction = (fn) => (...args) => {
-    database.exec('BEGIN IMMEDIATE');
+    database.run('BEGIN IMMEDIATE');
     try {
       const result = fn(...args);
-      database.exec('COMMIT');
+      database.run('COMMIT');
+      schedulePersist();
       return result;
     } catch (err) {
-      database.exec('ROLLBACK');
+      database.run('ROLLBACK');
       throw err;
     }
   };
@@ -26,13 +104,22 @@ export function getDb() {
   return db;
 }
 
-export function initDatabase() {
+export async function initDatabase() {
   fs.mkdirSync(config.dataDir, { recursive: true });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
 
-  const dbPath = path.join(config.dataDir, 'vimms.db');
-  db = wrapDb(new DatabaseSync(dbPath));
-  db.exec('PRAGMA journal_mode = WAL');
+  dbPath = path.join(config.dataDir, 'vimms.db');
+  const wasmDir = path.dirname(require.resolve('sql.js/dist/sql-wasm.wasm'));
+  const SQL = await initSqlJs({
+    locateFile: (file) => path.join(wasmDir, file),
+  });
+
+  if (fs.existsSync(dbPath)) {
+    db = wrapDb(new SQL.Database(fs.readFileSync(dbPath)));
+  } else {
+    db = wrapDb(new SQL.Database());
+  }
+
   db.exec('PRAGMA foreign_keys = ON');
 
   db.exec(`
@@ -142,6 +229,7 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_purchases_shop_date ON purchases(shop_id, purchase_date);
   `);
 
+  persistDatabase();
   seedDefaultData();
   return db;
 }
@@ -178,6 +266,7 @@ function seedDefaultData() {
   for (const item of categories) {
     insertItem.run(shopId, ...item);
   }
+  persistDatabase();
 }
 
 export function getStockStatus(stockQty, reorderThreshold) {

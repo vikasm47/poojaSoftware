@@ -1,0 +1,37 @@
+---
+description: Dev conventions for backend and frontend code
+globs: backend/**/*,frontend/**/*
+alwaysApply: false
+---
+
+# Dev Conventions
+
+## Backend (Express + SQLite)
+- ES modules (`"type": "module"`)
+- Routes are thin — delegate to `services/`
+- Use `getDb()` from `db/database.js`; wrap multi-step writes in `db.transaction()`
+- Auth: JWT via `authMiddleware`; default dev PIN is `1234`
+- New endpoints: add route file, register in `backend/src/index.js`
+
+## Frontend (React)
+- Functional components, one page per file in `pages/`
+- API calls via `api` object in `api/client.js` — add new methods there
+- Use `formatINR()`, `formatDate()`, `formatDateTime()` from client.js
+- Modals for create/edit forms; tables for lists
+- CSS in `styles/index.css` + component-specific `.css` when needed
+
+## Naming
+- API routes: plural nouns (`/api/items`, `/api/sales`)
+- Stock status values: `in_stock`, `low_stock`, `out_of_stock`
+- Payment modes: `cash`, `upi`, `card`
+
+## Do not
+- Add SQLite-only features that block PostgreSQL migration
+- Hardcode shop-specific data (use `shops` table + `shop_id` FK)
+- Commit `.env`, `*.db`, or `node_modules/`
+
+## Testing locally
+```bash
+npm run dev:backend    # port 3847
+npm run dev:frontend   # port 5173, proxies /api
+```

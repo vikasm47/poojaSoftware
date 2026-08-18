@@ -1,0 +1,32 @@
+---
+description: API-first architecture — frontend never touches DB directly
+alwaysApply: true
+---
+
+# Architecture
+
+## Stack
+- **Backend:** Node.js + Express REST API (`backend/src/`)
+- **Database:** SQLite (`data/pooja_shop.db`) — portable to PostgreSQL later
+- **Frontend:** React + Vite (`frontend/src/`) — HTTP API calls only
+- **Desktop:** Electron wraps backend + frontend (`electron/`)
+
+## Rules
+1. All business logic lives in the backend API, not the frontend.
+2. Frontend must use `frontend/src/api/client.js` — never import DB or backend internals.
+3. Future mobile/web clients reuse the same API — keep routes generic (use `shop_id` on records).
+4. AI/Claude calls only from backend (`backend/src/services/advisorService.js`), never from frontend.
+5. Reports/exports generated server-side (`exportService.js`).
+
+## Folder map
+```
+backend/src/routes/     → REST endpoints
+backend/src/services/   → business logic
+backend/src/db/         → schema + queries
+frontend/src/pages/     → screen components
+frontend/src/api/       → HTTP client
+```
+
+## Currency & locale
+- INR (₹), Indian number formatting
+- Simple UI language for non-technical shop owners

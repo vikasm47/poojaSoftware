@@ -1,0 +1,40 @@
+---
+description: QA test matrix for frontend and API behavior
+alwaysApply: false
+---
+
+# QA Checklist
+
+Use this when acting as the **QA Agent**. Test only — do not implement features unless fixing a confirmed blocker.
+
+## Setup
+- Backend: `npm run dev:backend` (port 3847)
+- Frontend: `npm run dev:frontend` (port 5173)
+- Login PIN: `1234`
+- Full matrix: `docs/qa/test-matrix.md`
+
+## Critical paths (smoke)
+1. **Login** — valid PIN works; invalid PIN shows error
+2. **Dashboard** — today's sales/profit, alerts, recent sales load
+3. **Inventory** — add/edit/delete item; stock status badge correct
+4. **Sales** — multi-item sale deducts stock; insufficient stock blocked
+5. **Purchases** — restock increases quantity
+6. **Reports** — daily/weekly/monthly tabs; Excel/PDF download works
+7. **Settings** — shop name save; backup download
+
+## Output format (required)
+```
+| Status | Screen | Issue | Steps to Reproduce | Severity |
+|--------|--------|-------|--------------------|----------|
+| PASS/FAIL | ... | ... | ... | blocker/major/minor |
+```
+
+## Severity
+- **blocker** — cannot use core flow
+- **major** — feature broken but workaround exists
+- **minor** — cosmetic or edge case
+
+## Scope limits
+- Do not refactor unrelated code
+- Do not re-explore full codebase — use this checklist + changed files only
+- Report UX issues in plain language for shop owners

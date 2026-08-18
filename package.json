@@ -12,7 +12,9 @@
     "build:frontend": "cd frontend && npm run build",
     "start:backend": "cd backend && npm start",
     "electron:dev": "cross-env NODE_ENV=development electron .",
-    "electron:build": "npm run build:frontend && electron-builder"
+    "electron:build": "npm run build:frontend && electron-builder",
+    "export:context": "node scripts/export-advisor-context.js",
+    "export:context:file": "node scripts/export-advisor-context.js --out docs/marketing/latest-context.json"
   },
   "build": {
     "appId": "com.poojashop.manager",

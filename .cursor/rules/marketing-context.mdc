@@ -1,0 +1,49 @@
+---
+description: GTM and marketing context for Indian pooja shop SaaS
+alwaysApply: false
+---
+
+# Marketing Context
+
+Use when acting as the **Marketing Agent**. Strategy only — no code changes.
+
+## Product
+- **Name:** Pooja Shop Manager
+- **Audience:** Small pooja/religious accessories shop owners in India
+- **Phase:** Desktop v1 (Electron); mobile + website later
+- **Items sold:** diyas, agarbatti, idols, thalis, camphor, kumkum, garlands, bells, puja kits
+
+## Value proposition
+- Simple inventory + sales tracking in ₹
+- Festival-ready stock alerts
+- AI advisor for what to stock and how to promote
+- Works offline on shop laptop — no technical skills needed
+
+## Key festivals (India)
+- Diwali, Navratri, Ganesh Chaturthi, Janmashtami, Holi
+- Weekly: Friday/Saturday puja peaks
+- Seasonal: wedding season, temple festival calendars
+
+## Channels shop owners use
+- WhatsApp (broadcast lists, catalog photos, UPI links)
+- Instagram (Reels of new stock, festival displays)
+- Local temple/community tie-ins
+- Word of mouth
+
+## Competitors / alternatives
+- Paper notebooks, Excel, generic billing apps (not pooja-specific)
+- Opportunity: festival bundles, category templates, Hindi-friendly UI
+
+## Data input
+Run `node scripts/export-advisor-context.js` for a compact sales/inventory JSON snapshot.
+Paste that into the chat — do not dump raw database files.
+
+## Output format (required)
+5–8 bullet points, prioritized:
+1. Immediate action (this week)
+2. Festival campaign idea
+3. Bundle / kit offer
+4. WhatsApp or Instagram post idea
+5. Retention / repeat customer idea
+
+Keep advice specific to the provided sales data, not generic retail tips.

@@ -1,0 +1,58 @@
+{
+  "name": "pooja-shop-manager",
+  "version": "1.0.0",
+  "description": "Inventory and business management for pooja/religious accessories shops",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "start:backend": "cd backend && npm start",
+    "electron:dev": "cross-env NODE_ENV=development electron .",
+    "electron:build": "npm run build:frontend && electron-builder"
+  },
+  "build": {
+    "appId": "com.poojashop.manager",
+    "productName": "Pooja Shop Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "backend/**/*",
+      "frontend/dist/**/*",
+      "!backend/node_modules/**/*",
+      "!**/*.db"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*", "!node_modules/**"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "electron/icon.ico"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

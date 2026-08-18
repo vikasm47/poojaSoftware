@@ -1,0 +1,53 @@
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { clearAuth, getShop } from '../api/client';
+import './Layout.css';
+
+const NAV = [
+  { to: '/', label: 'Dashboard', icon: '🏠' },
+  { to: '/inventory', label: 'Inventory', icon: '📦' },
+  { to: '/sales', label: 'Sales', icon: '💰' },
+  { to: '/purchases', label: 'Purchases', icon: '🛒' },
+  { to: '/reports', label: 'Reports', icon: '📊' },
+  { to: '/advisor', label: 'AI Advisor', icon: '✨' },
+  { to: '/settings', label: 'Settings', icon: '⚙️' },
+];
+
+export default function Layout() {
+  const navigate = useNavigate();
+  const shop = getShop();
+
+  function logout() {
+    clearAuth();
+    navigate('/login');
+  }
+
+  return (
+    <div className="layout">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <span className="brand-icon">🪔</span>
+          <div>
+            <div className="brand-name">{shop.name || 'Pooja Shop'}</div>
+            <div className="brand-tag">Shop Manager</div>
+          </div>
+        </div>
+        <nav className="sidebar-nav">
+          {NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              <span>{item.icon}</span> {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <button className="btn btn-ghost logout-btn" onClick={logout}>Logout</button>
+      </aside>
+      <main className="main-content">
+        <Outlet />
+      </main>
+    </div>
+  );
+}

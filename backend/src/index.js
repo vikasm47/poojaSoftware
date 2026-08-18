@@ -48,7 +48,7 @@ app.get('*', (req, res, next) => {
 });
 
 app.listen(config.port, () => {
-  console.log(`Pooja Shop API running on http://localhost:${config.port}`);
+  console.log(`VIMMS API running on http://localhost:${config.port}`);
 });
 
 export default app;

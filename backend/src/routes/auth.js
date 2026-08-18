@@ -63,7 +63,7 @@ router.put('/shop', (req, res) => {
   const shop = db.prepare('SELECT id FROM shops LIMIT 1').get();
 
   db.prepare('UPDATE shops SET name = ?, address = ?, phone = ? WHERE id = ?').run(
-    name || 'My Pooja Shop',
+    name || 'My Shop',
     address || null,
     phone || null,
     shop.id

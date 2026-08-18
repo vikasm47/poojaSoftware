@@ -1,10 +1,25 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { config } from '../config.js';
 
 let db;
+
+function wrapDb(database) {
+  database.transaction = (fn) => (...args) => {
+    database.exec('BEGIN IMMEDIATE');
+    try {
+      const result = fn(...args);
+      database.exec('COMMIT');
+      return result;
+    } catch (err) {
+      database.exec('ROLLBACK');
+      throw err;
+    }
+  };
+  return database;
+}
 
 export function getDb() {
   if (!db) throw new Error('Database not initialized');
@@ -15,10 +30,10 @@ export function initDatabase() {
   fs.mkdirSync(config.dataDir, { recursive: true });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
 
-  const dbPath = path.join(config.dataDir, 'pooja_shop.db');
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  const dbPath = path.join(config.dataDir, 'vimms.db');
+  db = wrapDb(new DatabaseSync(dbPath));
+  db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA foreign_keys = ON');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS shops (

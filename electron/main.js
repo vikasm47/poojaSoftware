@@ -4,15 +4,20 @@ const { spawn } = require('child_process');
 const http = require('http');
 
 const PORT = 3847;
+const APP_TITLE = 'VIMMS — Vidhi Inventory and Marketing Management Software';
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow = null;
 let backendProcess = null;
 
-function getBackendPath() {
+function getBackendDir() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'backend', 'src', 'index.js');
+    return path.join(process.resourcesPath, 'backend');
   }
-  return path.join(__dirname, '..', 'backend', 'src', 'index.js');
+  return path.join(__dirname, '..', 'backend');
+}
+
+function getBackendPath() {
+  return path.join(getBackendDir(), 'src', 'index.js');
 }
 
 function getDataDir() {
@@ -32,6 +37,7 @@ function startBackend() {
 
     backendProcess = spawn(process.execPath, [backendScript], {
       env,
+      cwd: getBackendDir(),
       stdio: 'pipe',
       windowsHide: true,
     });
@@ -58,12 +64,15 @@ function startBackend() {
 }
 
 function createWindow() {
+  const iconPath = path.join(__dirname, 'icon.ico');
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    title: 'Pooja Shop Manager',
+    title: APP_TITLE,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

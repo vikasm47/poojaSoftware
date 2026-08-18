@@ -10,7 +10,7 @@ function formatINR(amount) {
 export async function generateExcelReport(period, from, to) {
   const report = getReport(period, from, to);
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Pooja Shop Manager';
+  workbook.creator = 'VIMMS';
 
   const sheet = workbook.addWorksheet('Sales Report');
   sheet.columns = [

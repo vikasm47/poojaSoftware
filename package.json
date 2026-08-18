@@ -1,8 +1,8 @@
 {
-  "name": "pooja-shop-manager",
+  "name": "vimms",
   "version": "1.0.0",
-  "description": "Inventory and business management for pooja/religious accessories shops",
-  "private": true,
+  "description": "Vidhi Inventory and Marketing Management Software (VIMMS)",
+  "author": "Vidhi Software",
   "main": "electron/main.js",
   "scripts": {
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
@@ -13,12 +13,14 @@
     "start:backend": "cd backend && npm start",
     "electron:dev": "cross-env NODE_ENV=development electron .",
     "electron:build": "npm run build:frontend && electron-builder",
+    "electron:build:win": "npm run build:frontend && npx electron-builder --win nsis",
+    "generate:icon": "node scripts/generate-icon.js",
     "export:context": "node scripts/export-advisor-context.js",
     "export:context:file": "node scripts/export-advisor-context.js --out docs/marketing/latest-context.json"
   },
   "build": {
-    "appId": "com.poojashop.manager",
-    "productName": "Pooja Shop Manager",
+    "appId": "com.vidhi.vimms",
+    "productName": "VIMMS",
     "directories": {
       "output": "release"
     },
@@ -26,35 +28,43 @@
       "electron/**/*",
       "backend/**/*",
       "frontend/dist/**/*",
-      "!backend/node_modules/**/*",
       "!**/*.db"
     ],
     "extraResources": [
       {
         "from": "backend",
         "to": "backend",
-        "filter": ["**/*", "!node_modules/**"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
       "target": "nsis",
-      "icon": "electron/icon.ico"
+      "icon": "electron/icon.ico",
+      "signAndEditExecutable": false
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "electron/icon.png"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "electron/icon.png"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "VIMMS",
+      "installerIcon": "electron/icon.ico",
+      "uninstallerIcon": "electron/icon.ico"
     }
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
     "electron": "^33.2.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "png-to-ico": "^3.0.2"
   }
 }

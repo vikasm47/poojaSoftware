@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, downloadWithAuth } from '../api/client';
+import { APP_FULL_NAME, APP_NAME, APP_VERSION } from '../config/branding';
 
 export default function Settings() {
   const [shop, setShop] = useState({ name: '', address: '', phone: '' });
@@ -47,7 +48,7 @@ export default function Settings() {
   }
 
   function backupData() {
-    downloadWithAuth(api.backupUrl(), 'pooja-shop-backup.db');
+    downloadWithAuth(api.backupUrl(), 'vimms-backup.db');
   }
 
   return (
@@ -110,8 +111,8 @@ export default function Settings() {
         <div className="card">
           <h2 className="card-title">About</h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-            Pooja Shop Manager v1.0<br />
-            API-first architecture — ready for mobile app and website in future phases.<br />
+            {APP_NAME} v{APP_VERSION}<br />
+            {APP_FULL_NAME}<br />
             Default login PIN: 1234 (change it above)
           </p>
         </div>

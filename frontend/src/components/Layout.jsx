@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { clearAuth, getShop } from '../api/client';
+import { APP_NAME, APP_TAGLINE } from '../config/branding';
 import './Layout.css';
 
 const NAV = [
@@ -25,10 +26,10 @@ export default function Layout() {
     <div className="layout">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <span className="brand-icon">🪔</span>
+          <img src="/logo.png" alt={APP_NAME} className="brand-logo" />
           <div>
-            <div className="brand-name">{shop.name || 'Pooja Shop'}</div>
-            <div className="brand-tag">Shop Manager</div>
+            <div className="brand-name">{shop.name || 'My Shop'}</div>
+            <div className="brand-tag">{APP_NAME} · {APP_TAGLINE}</div>
           </div>
         </div>
         <nav className="sidebar-nav">

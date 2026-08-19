@@ -16,9 +16,9 @@ export default function Advisor() {
     try {
       const data = await api.getMarketingInsights(refresh);
       setMarketing(data);
-    } catch (err) {
-      setError(err.message);
-      setMarketing({ insights: 'Could not load marketing insights. Please try again.', offline: true });
+    } catch {
+      setError('Could not reach AI service. Please try again in a moment.');
+      setMarketing({ insights: null, offline: true });
     } finally {
       setLoading('');
     }
@@ -30,9 +30,9 @@ export default function Advisor() {
     try {
       const data = await api.getInventoryInsights(refresh);
       setInventory(data);
-    } catch (err) {
-      setError(err.message);
-      setInventory({ insights: 'Could not load inventory insights. Please try again.', offline: true });
+    } catch {
+      setError('Could not reach AI service. Please try again in a moment.');
+      setInventory({ insights: null, offline: true });
     } finally {
       setLoading('');
     }

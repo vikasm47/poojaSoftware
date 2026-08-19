@@ -1,14 +1,22 @@
 import { getDb } from '../db/database.js';
 import { config } from '../config.js';
 
+export const DEFAULT_GOOGLE_AI_MODEL = 'gemini-3.6-flash';
+
 export const GOOGLE_AI_MODELS = [
-  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (recommended)' },
-  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
-  { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-  { id: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B' },
-  { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-  { id: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash (preview)' },
+  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (recommended)' },
+  { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite' },
 ];
+
+const DEPRECATED_GOOGLE_AI_MODELS = new Set([
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-pro',
+  'gemini-2.5-flash-preview-05-20',
+]);
 
 export function getSetting(key) {
   const row = getDb().prepare('SELECT value FROM app_settings WHERE key = ?').get(key);
@@ -30,9 +38,17 @@ export function getGoogleApiKey() {
 
 export function getGoogleAiModel() {
   const fromDb = getSetting('google_ai_model').trim();
-  const valid = GOOGLE_AI_MODELS.some((m) => m.id === fromDb);
-  if (valid) return fromDb;
-  return config.googleAiModel;
+  if (fromDb) {
+    if (GOOGLE_AI_MODELS.some((m) => m.id === fromDb)) return fromDb;
+    if (DEPRECATED_GOOGLE_AI_MODELS.has(fromDb)) {
+      setSetting('google_ai_model', DEFAULT_GOOGLE_AI_MODEL);
+      return DEFAULT_GOOGLE_AI_MODEL;
+    }
+  }
+
+  const envModel = config.googleAiModel;
+  if (GOOGLE_AI_MODELS.some((m) => m.id === envModel)) return envModel;
+  return DEFAULT_GOOGLE_AI_MODEL;
 }
 
 export function hasValidGoogleApiKey() {

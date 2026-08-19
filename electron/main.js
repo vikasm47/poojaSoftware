@@ -46,6 +46,27 @@ function getDataDir() {
   return path.join(app.getPath('userData'), 'data');
 }
 
+function probeBackendHealth() {
+  return new Promise((resolve) => {
+    http.get(`http://localhost:${PORT}/api/health`, (res) => {
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(body);
+          const ok = res.statusCode === 200
+            && json.status === 'ok'
+            && Array.isArray(json.capabilities)
+            && json.capabilities.includes('admin');
+          resolve(ok);
+        } catch {
+          resolve(false);
+        }
+      });
+    }).on('error', () => resolve(false));
+  });
+}
+
 function startBackend() {
   return new Promise((resolve, reject) => {
     const backendScript = getBackendPath();
@@ -70,6 +91,10 @@ function startBackend() {
     log(`Starting backend: ${backendScript}`);
     log(`Frontend dist: ${frontendDist}`);
 
+    let backendReady = false;
+    let backendExited = false;
+    let exitCode = null;
+
     backendProcess = spawn(process.execPath, [backendScript], {
       env,
       cwd: getBackendDir(),
@@ -79,22 +104,39 @@ function startBackend() {
 
     backendProcess.stdout.on('data', (data) => log(`[backend] ${data}`.trim()));
     backendProcess.stderr.on('data', (data) => log(`[backend err] ${data}`.trim()));
-    backendProcess.on('exit', (code) => log(`Backend exited with code ${code}`));
+    backendProcess.on('exit', (code) => {
+      exitCode = code;
+      backendExited = true;
+      log(`Backend exited with code ${code}`);
+    });
 
     let attempts = 0;
-    const check = setInterval(() => {
+    const check = setInterval(async () => {
       attempts++;
-      http.get(`http://localhost:${PORT}/api/health`, (res) => {
-        if (res.statusCode === 200) {
-          clearInterval(check);
-          resolve();
-        }
-      }).on('error', () => {
-        if (attempts > 60) {
-          clearInterval(check);
-          reject(new Error('Backend failed to start within 30 seconds. Check vimms-startup.log in AppData.'));
-        }
-      });
+
+      if (backendExited && !backendReady) {
+        clearInterval(check);
+        const portBusy = exitCode === 1;
+        return reject(new Error(
+          portBusy
+            ? `Port ${PORT} is already in use. Close any running "npm run dev:backend" terminal or other VIMMS windows, then start VIMMS again.`
+            : `Backend exited before it was ready (code ${exitCode}). Check vimms-startup.log in AppData.`
+        ));
+      }
+
+      const healthy = await probeBackendHealth();
+      if (healthy && !backendExited) {
+        backendReady = true;
+        clearInterval(check);
+        return resolve();
+      }
+
+      if (attempts > 60) {
+        clearInterval(check);
+        reject(new Error(
+          `Backend failed to start within 30 seconds. If you run "npm run dev:backend" for development, stop it before opening the installed VIMMS app. Log: ${getLogPath()}`
+        ));
+      }
     }, 500);
   });
 }

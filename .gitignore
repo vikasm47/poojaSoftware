@@ -10,3 +10,7 @@ Thumbs.db
 *.log
 uploads/
 data/
+scripts/.license-keys/
+license.dat
+*.license
+*.key

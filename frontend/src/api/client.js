@@ -39,6 +39,15 @@ async function request(path, options = {}) {
     throw new Error('Session expired');
   }
 
+  if (res.status === 403) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    if (err.code === 'LICENSE_REQUIRED') {
+      window.location.href = '/license';
+      throw new Error(err.error || 'License required');
+    }
+    throw new Error(err.error || 'Request failed');
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Request failed');
@@ -71,12 +80,18 @@ export const api = {
     return request(`/api/sales${q ? `?${q}` : ''}`);
   },
   createSale: (data) => request('/api/sales', { method: 'POST', body: JSON.stringify(data) }),
+  getSale: (id) => request(`/api/sales/${id}`),
+  updateSale: (id, data) => request(`/api/sales/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteSale: (id) => request(`/api/sales/${id}`, { method: 'DELETE' }),
 
   getPurchases: (params = {}) => {
     const q = new URLSearchParams(params).toString();
     return request(`/api/purchases${q ? `?${q}` : ''}`);
   },
   createPurchase: (data) => request('/api/purchases', { method: 'POST', body: JSON.stringify(data) }),
+  getPurchase: (id) => request(`/api/purchases/${id}`),
+  updatePurchase: (id, data) => request(`/api/purchases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePurchase: (id) => request(`/api/purchases/${id}`, { method: 'DELETE' }),
 
   getDashboard: () => request('/api/reports/dashboard'),
   getReport: (period, params = {}) => {
@@ -107,6 +122,12 @@ export const api = {
   deleteCategory: (id) => request(`/api/admin/categories/${id}`, { method: 'DELETE' }),
   getAiSettings: () => request('/api/admin/ai-settings'),
   saveAiSettings: (data) => request('/api/admin/ai-settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  getLicenseStatus: () => request('/api/license/status'),
+  activateLicense: (licenseKey) => request('/api/license/activate', {
+    method: 'POST',
+    body: JSON.stringify({ licenseKey }),
+  }),
 };
 
 export function formatINR(amount) {

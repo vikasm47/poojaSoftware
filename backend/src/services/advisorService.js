@@ -4,6 +4,8 @@ import {
   getGoogleApiKey,
   getGoogleAiModel,
   hasValidGoogleApiKey,
+  DEFAULT_GOOGLE_AI_MODEL,
+  GOOGLE_AI_MODELS,
 } from './settingsService.js';
 import { getDb } from '../db/database.js';
 
@@ -44,6 +46,13 @@ function setCachedResponse(cacheKey, response) {
   `).run(shopId, cacheKey, JSON.stringify(response));
 }
 
+function isModelError(err) {
+  const msg = err?.message || String(err);
+  return msg.includes('no longer available')
+    || msg.includes('not found for API version')
+    || (msg.includes('404') && msg.includes('models/'));
+}
+
 function isApiError(err) {
   const msg = err?.message || String(err);
   return msg.includes('API key')
@@ -53,20 +62,87 @@ function isApiError(err) {
     || msg.includes('PERMISSION_DENIED');
 }
 
+function modelErrorMessage() {
+  return `The selected AI model is no longer available. Go to Admin → AI Settings, choose "${DEFAULT_GOOGLE_AI_MODEL}", save, then refresh insights.`;
+}
+
+function isTransientError(err) {
+  const msg = err?.message || String(err);
+  return msg.includes('503')
+    || msg.includes('429')
+    || msg.includes('high demand')
+    || msg.includes('overloaded')
+    || msg.includes('Service Unavailable')
+    || msg.includes('RESOURCE_EXHAUSTED');
+}
+
+function transientErrorMessage() {
+  return 'Google AI is busy right now. Showing offline suggestions — try Refresh in a few minutes, or pick another model in Admin → AI Settings.';
+}
+
+function buildModelChain(preferredModel) {
+  const ids = GOOGLE_AI_MODELS.map((m) => m.id);
+  return [...new Set([preferredModel, ...ids.filter((id) => id !== preferredModel)])];
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callGemini(userPrompt) {
   const apiKey = getGoogleApiKey();
-  const modelId = getGoogleAiModel();
   const context = getAdvisorContext();
+  const fullPrompt = `${userPrompt}\n\nShop data:\n${JSON.stringify(context, null, 2)}`;
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: modelId,
-    systemInstruction: SYSTEM_PROMPT,
-  });
+  const chain = buildModelChain(getGoogleAiModel());
+  let lastError;
 
-  const result = await model.generateContent(
-    `${userPrompt}\n\nShop data:\n${JSON.stringify(context, null, 2)}`
-  );
-  return result.response.text();
+  for (let i = 0; i < chain.length; i++) {
+    const modelId = chain[i];
+    try {
+      if (i > 0) await sleep(600);
+      const model = genAI.getGenerativeModel({
+        model: modelId,
+        systemInstruction: SYSTEM_PROMPT,
+      });
+      const result = await model.generateContent(fullPrompt);
+      return { text: result.response.text(), model: modelId };
+    } catch (err) {
+      lastError = err;
+      const retryable = isTransientError(err) || isModelError(err);
+      if (!retryable || i === chain.length - 1) break;
+    }
+  }
+
+  throw lastError;
+}
+
+function handleAdvisorError(err, offlineInsights) {
+  if (isApiError(err)) {
+    return {
+      insights: offlineInsights(),
+      cached: false,
+      offline: true,
+      apiError: 'Invalid Google API key — showing offline suggestions. Add your key in Admin → AI Settings.',
+    };
+  }
+  if (isModelError(err)) {
+    return {
+      insights: offlineInsights(),
+      cached: false,
+      offline: true,
+      apiError: modelErrorMessage(),
+    };
+  }
+  if (isTransientError(err)) {
+    return {
+      insights: offlineInsights(),
+      cached: false,
+      offline: true,
+      apiError: transientErrorMessage(),
+    };
+  }
+  throw err;
 }
 
 export async function getMarketingInsights(forceRefresh = false) {
@@ -85,20 +161,12 @@ export async function getMarketingInsights(forceRefresh = false) {
   }
 
   try {
-    const text = await callGemini('Analyze this shop data and suggest marketing strategies:');
+    const { text, model } = await callGemini('Analyze this shop data and suggest marketing strategies:');
     const result = { insights: text, generatedAt: new Date().toISOString() };
     setCachedResponse(cacheKey, result);
-    return { ...result, cached: false, offline: false, model: getGoogleAiModel() };
+    return { ...result, cached: false, offline: false, model };
   } catch (err) {
-    if (isApiError(err)) {
-      return {
-        insights: getOfflineMarketingAdvice(),
-        cached: false,
-        offline: true,
-        apiError: 'Invalid Google API key — showing offline suggestions. Add your key in Admin → AI Settings.',
-      };
-    }
-    throw err;
+    return handleAdvisorError(err, getOfflineMarketingAdvice);
   }
 }
 
@@ -118,20 +186,12 @@ export async function getInventoryInsights(forceRefresh = false) {
   }
 
   try {
-    const text = await callGemini('Suggest what to stock more, what to discount, and new items to add:');
+    const { text, model } = await callGemini('Suggest what to stock more, what to discount, and new items to add:');
     const result = { insights: text, generatedAt: new Date().toISOString() };
     setCachedResponse(cacheKey, result);
-    return { ...result, cached: false, offline: false, model: getGoogleAiModel() };
+    return { ...result, cached: false, offline: false, model };
   } catch (err) {
-    if (isApiError(err)) {
-      return {
-        insights: getOfflineInventoryAdvice(),
-        cached: false,
-        offline: true,
-        apiError: 'Invalid Google API key — showing offline suggestions. Add your key in Admin → AI Settings.',
-      };
-    }
-    throw err;
+    return handleAdvisorError(err, getOfflineInventoryAdvice);
   }
 }
 
@@ -144,14 +204,20 @@ export async function askAdvisor(question) {
   }
 
   try {
-    const text = await callGemini(`Question: ${question}`);
-    return { answer: text, offline: false, model: getGoogleAiModel() };
+    const { text, model } = await callGemini(`Question: ${question}`);
+    return { answer: text, offline: false, model };
   } catch (err) {
     if (isApiError(err)) {
       return {
-        answer: 'Your Google API key is invalid or the selected model is unavailable. Update it in Admin → AI Settings and try a different model.',
+        answer: 'Your Google API key is invalid. Update it in Admin → AI Settings.',
         offline: true,
       };
+    }
+    if (isModelError(err)) {
+      return { answer: modelErrorMessage(), offline: true };
+    }
+    if (isTransientError(err)) {
+      return { answer: transientErrorMessage(), offline: true };
     }
     throw err;
   }

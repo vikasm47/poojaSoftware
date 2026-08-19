@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 
+const DEFAULT_AI_MODELS = [
+  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (recommended)' },
+  { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite' },
+];
+
+function formatAdminError(message) {
+  if (message === 'Not Found') {
+    return 'Admin API is unavailable. Close any dev backend (npm run dev:backend), fully quit VIMMS, and open it again.';
+  }
+  return message;
+}
+
 export default function Admin() {
   const [tab, setTab] = useState('categories');
   const [categories, setCategories] = useState([]);
@@ -9,19 +22,19 @@ export default function Admin() {
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gemini-2.0-flash');
+  const [model, setModel] = useState('gemini-3.6-flash');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   function loadCategories() {
-    api.getAdminCategories().then(setCategories).catch((e) => setError(e.message));
+    api.getAdminCategories().then(setCategories).catch((e) => setError(formatAdminError(e.message)));
   }
 
   function loadAiSettings() {
     api.getAiSettings().then((data) => {
       setAiSettings(data);
-      setModel(data.model);
-    }).catch((e) => setError(e.message));
+      setModel(data.model || 'gemini-3.6-flash');
+    }).catch((e) => setError(formatAdminError(e.message)));
   }
 
   useEffect(() => {
@@ -39,7 +52,7 @@ export default function Admin() {
       loadCategories();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(formatAdminError(err.message));
     }
   }
 
@@ -52,7 +65,7 @@ export default function Admin() {
       loadCategories();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(formatAdminError(err.message));
     }
   }
 
@@ -65,7 +78,7 @@ export default function Admin() {
       loadCategories();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(formatAdminError(err.message));
     }
   }
 
@@ -81,9 +94,11 @@ export default function Admin() {
       setMessage('AI settings saved!');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(formatAdminError(err.message));
     }
   }
+
+  const modelOptions = aiSettings?.models?.length ? aiSettings.models : DEFAULT_AI_MODELS;
 
   return (
     <div>
@@ -187,7 +202,7 @@ export default function Admin() {
             <div className="form-group">
               <label className="label">AI Model</label>
               <select className="select" value={model} onChange={(e) => setModel(e.target.value)}>
-                {(aiSettings?.models || []).map((m) => (
+                {modelOptions.map((m) => (
                   <option key={m.id} value={m.id}>{m.label}</option>
                 ))}
               </select>
@@ -196,7 +211,7 @@ export default function Admin() {
           </form>
 
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '1rem' }}>
-            Supported models: Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro, and more. Change model if one is unavailable in your region.
+            Supported models: Gemini 3.6 Flash, 3.5 Flash, and 3.5 Flash Lite. Change model if one is unavailable in your region.
           </p>
         </div>
       )}

@@ -21,7 +21,7 @@ export const config = {
   port: parseInt(process.env.PORT || '3847', 10),
   jwtSecret: process.env.JWT_SECRET || 'pooja-shop-dev-secret-change-me',
   googleApiKey: resolveGoogleApiKey(),
-  googleAiModel: process.env.GOOGLE_AI_MODEL || 'gemini-2.0-flash',
+  googleAiModel: process.env.GOOGLE_AI_MODEL || 'gemini-3.6-flash',
   shopName: process.env.SHOP_NAME || 'My Shop',
   defaultPin: process.env.DEFAULT_PIN || '1234',
   dataDir: process.env.DATA_DIR || path.join(__dirname, '../../data'),

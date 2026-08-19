@@ -83,15 +83,33 @@ export const api = {
   getSale: (id) => request(`/api/sales/${id}`),
   updateSale: (id, data) => request(`/api/sales/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteSale: (id) => request(`/api/sales/${id}`, { method: 'DELETE' }),
+  saleInvoiceUrl: (id) => `${API_BASE}/api/sales/${id}/invoice`,
 
   getPurchases: (params = {}) => {
     const q = new URLSearchParams(params).toString();
     return request(`/api/purchases${q ? `?${q}` : ''}`);
   },
-  createPurchase: (data) => request('/api/purchases', { method: 'POST', body: JSON.stringify(data) }),
+  createPurchase: (data, receiptFile) => {
+    if (receiptFile) {
+      const form = new FormData();
+      if (data.items) form.append('items', JSON.stringify(data.items));
+      if (data.item_id) form.append('item_id', data.item_id);
+      if (data.qty) form.append('qty', data.qty);
+      if (data.cost_price_at_purchase) form.append('cost_price_at_purchase', data.cost_price_at_purchase);
+      if (data.supplier) form.append('supplier', data.supplier);
+      form.append('receipt', receiptFile);
+      return request('/api/purchases', { method: 'POST', body: form });
+    }
+    return request('/api/purchases', { method: 'POST', body: JSON.stringify(data) });
+  },
   getPurchase: (id) => request(`/api/purchases/${id}`),
   updatePurchase: (id, data) => request(`/api/purchases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePurchase: (id) => request(`/api/purchases/${id}`, { method: 'DELETE' }),
+  uploadPurchaseReceipt: (id, file) => {
+    const form = new FormData();
+    form.append('receipt', file);
+    return request(`/api/purchases/${id}/receipt`, { method: 'POST', body: form });
+  },
 
   getDashboard: () => request('/api/reports/dashboard'),
   getReport: (period, params = {}) => {

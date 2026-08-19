@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getDb } from '../db/database.js';
+import { generateSaleInvoice } from '../services/invoiceService.js';
 
 const router = Router();
 
@@ -30,6 +31,17 @@ router.get('/', (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
+router.get('/:id/invoice', async (req, res) => {
+  try {
+    const pdf = await generateSaleInvoice(req.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${req.params.id}.pdf`);
+    res.send(pdf);
+  } catch (err) {
+    res.status(err.message === 'Sale not found' ? 404 : 400).json({ error: err.message });
+  }
+});
+
 router.get('/:id', (req, res) => {
   const db = getDb();
   const sale = db.prepare('SELECT * FROM sales WHERE id = ?').get(req.params.id);
@@ -48,7 +60,7 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   const db = getDb();
   const shopId = getShopId();
-  const { items, discount = 0, payment_mode = 'cash', sale_date } = req.body;
+  const { items, discount = 0, payment_mode = 'cash', sale_date, customer_name, customer_address } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'At least one item is required' });
@@ -76,15 +88,17 @@ router.post('/', (req, res) => {
     const totalAmount = Math.max(0, subtotal - (parseFloat(discount) || 0));
 
     const saleResult = db.prepare(`
-      INSERT INTO sales (shop_id, user_id, sale_date, discount, payment_mode, total_amount)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO sales (shop_id, user_id, sale_date, discount, payment_mode, total_amount, customer_name, customer_address)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shopId,
       user?.id,
       sale_date || new Date().toISOString(),
       parseFloat(discount) || 0,
       payment_mode,
-      totalAmount
+      totalAmount,
+      customer_name?.trim() || null,
+      customer_address?.trim() || null,
     );
 
     const saleId = saleResult.lastInsertRowid;
@@ -121,7 +135,7 @@ router.put('/:id', (req, res) => {
   const db = getDb();
   const shopId = getShopId();
   const saleId = parseInt(req.params.id, 10);
-  const { items, discount = 0, payment_mode = 'cash', sale_date } = req.body;
+  const { items, discount = 0, payment_mode = 'cash', sale_date, customer_name, customer_address } = req.body;
 
   const existing = db.prepare('SELECT * FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shopId);
   if (!existing) return res.status(404).json({ error: 'Sale not found' });
@@ -162,13 +176,15 @@ router.put('/:id', (req, res) => {
 
     db.prepare(`
       UPDATE sales
-      SET sale_date = ?, discount = ?, payment_mode = ?, total_amount = ?
+      SET sale_date = ?, discount = ?, payment_mode = ?, total_amount = ?, customer_name = ?, customer_address = ?
       WHERE id = ? AND shop_id = ?
     `).run(
       sale_date || existing.sale_date,
       parseFloat(discount) || 0,
       payment_mode,
       totalAmount,
+      customer_name?.trim() || null,
+      customer_address?.trim() || null,
       saleId,
       shopId
     );

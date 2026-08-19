@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, formatINR, formatDateTime } from '../api/client';
 import MultiItemPicker from '../components/MultiItemPicker';
 
@@ -9,11 +9,14 @@ export default function Purchases() {
   const [purchases, setPurchases] = useState([]);
   const [cart, setCart] = useState([]);
   const [supplier, setSupplier] = useState('');
+  const [receiptFile, setReceiptFile] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const receiptInputRef = useRef(null);
+  const editReceiptRef = useRef(null);
 
   function load() {
     api.getItems().then(setItems);
@@ -25,6 +28,7 @@ export default function Purchases() {
   function resetForm() {
     setCart([]);
     setSupplier('');
+    setReceiptFile(null);
     setForm(EMPTY_FORM);
     setEditingId(null);
     setError('');
@@ -64,7 +68,7 @@ export default function Purchases() {
           cost_price_at_purchase: c.cost,
         })),
         supplier: supplier || undefined,
-      });
+      }, receiptFile);
       setSuccess(`Purchase recorded — ${cart.length} item(s) added to stock!`);
       resetForm();
       setShowForm(false);
@@ -85,6 +89,10 @@ export default function Purchases() {
         cost_price_at_purchase: parseFloat(form.cost_price_at_purchase) || undefined,
         supplier: form.supplier || undefined,
       });
+      const receipt = editReceiptRef.current?.files?.[0];
+      if (receipt) {
+        await api.uploadPurchaseReceipt(editingId, receipt);
+      }
       setSuccess('Purchase updated successfully!');
       resetForm();
       setShowForm(false);
@@ -108,6 +116,26 @@ export default function Purchases() {
     }
   }
 
+  async function attachReceipt(purchaseId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,.pdf';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setError('');
+      try {
+        await api.uploadPurchaseReceipt(purchaseId, file);
+        setSuccess('Receipt attached!');
+        load();
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+    input.click();
+  }
+
   function onItemSelect(itemId) {
     const item = items.find((i) => i.id === parseInt(itemId, 10));
     setForm({
@@ -125,7 +153,7 @@ export default function Purchases() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Purchases</h1>
-          <p className="page-subtitle">Add multiple items in one purchase — search, tap items, then record</p>
+          <p className="page-subtitle">Record multiple items and attach purchase receipts</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>
           + Record Purchase
@@ -140,7 +168,16 @@ export default function Purchases() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Date</th><th>Item</th><th>Qty</th><th>Cost/Unit</th><th>Supplier</th><th>Total</th><th>Actions</th></tr>
+              <tr>
+                <th>Date</th>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Cost/Unit</th>
+                <th>Supplier</th>
+                <th>Total</th>
+                <th>Receipt</th>
+                <th>Actions</th>
+              </tr>
             </thead>
             <tbody>
               {purchases.map((p) => (
@@ -151,6 +188,13 @@ export default function Purchases() {
                   <td>{formatINR(p.cost_price_at_purchase)}</td>
                   <td>{p.supplier || '—'}</td>
                   <td>{formatINR(p.total_amount)}</td>
+                  <td>
+                    {p.receipt_path ? (
+                      <a href={p.receipt_path} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">View</a>
+                    ) : (
+                      <button className="btn btn-ghost btn-sm" onClick={() => attachReceipt(p.id)}>Attach</button>
+                    )}
+                  </td>
                   <td>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p.id)}>Edit</button>
                     <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}>Delete</button>
@@ -200,6 +244,13 @@ export default function Purchases() {
                   <input className="input" value={form.supplier}
                     onChange={(e) => setForm({ ...form, supplier: e.target.value })} />
                 </div>
+                <div className="form-group">
+                  <label className="label">Purchase Receipt</label>
+                  <input ref={editReceiptRef} className="input" type="file" accept="image/*,.pdf" />
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    JPG, PNG, PDF, or WebP — max 10 MB
+                  </p>
+                </div>
                 <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Save Changes</button>
               </form>
             ) : (
@@ -215,6 +266,20 @@ export default function Purchases() {
                   <label className="label">Supplier (applies to all items)</label>
                   <input className="input" value={supplier} placeholder="Optional — same supplier for this bill"
                     onChange={(e) => setSupplier(e.target.value)} />
+                </div>
+
+                <div className="form-group">
+                  <label className="label">Purchase Receipt</label>
+                  <input
+                    ref={receiptInputRef}
+                    className="input"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                  />
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    Attach bill or receipt photo (JPG, PNG, PDF) — saved with all items in this purchase
+                  </p>
                 </div>
 
                 <div style={{ fontSize: '1.25rem', fontWeight: 700, textAlign: 'right', margin: '1rem 0' }}>

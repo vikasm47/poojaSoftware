@@ -1,10 +1,43 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/database.js';
+import { config } from '../config.js';
 
 const router = Router();
 
+const receiptsDir = path.join(config.uploadsDir, 'receipts');
+fs.mkdirSync(receiptsDir, { recursive: true });
+
+const receiptUpload = multer({
+  storage: multer.diskStorage({
+    destination: receiptsDir,
+    filename: (_req, file, cb) => {
+      cb(null, `receipt-${uuidv4()}${path.extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /\.(jpe?g|png|pdf|webp)$/i.test(file.originalname);
+    cb(null, ok);
+  },
+});
+
 function getShopId() {
   return getDb().prepare('SELECT id FROM shops LIMIT 1').get().id;
+}
+
+function parseBody(req) {
+  if (req.body.items && typeof req.body.items === 'string') {
+    return { ...req.body, items: JSON.parse(req.body.items) };
+  }
+  return req.body;
+}
+
+function receiptPathFromFile(file) {
+  return file ? `/uploads/receipts/${file.filename}` : null;
 }
 
 router.get('/', (req, res) => {
@@ -43,10 +76,12 @@ router.get('/:id', (req, res) => {
   res.json(purchase);
 });
 
-router.post('/', (req, res) => {
+router.post('/', receiptUpload.single('receipt'), (req, res) => {
   const db = getDb();
   const shopId = getShopId();
-  const { items, item_id, qty, cost_price_at_purchase, supplier, purchase_date } = req.body;
+  const body = parseBody(req);
+  const { items, item_id, qty, cost_price_at_purchase, supplier, purchase_date } = body;
+  const receiptPath = receiptPathFromFile(req.file);
 
   if (Array.isArray(items) && items.length > 0) {
     const user = db.prepare('SELECT id FROM users LIMIT 1').get();
@@ -57,8 +92,8 @@ router.post('/', (req, res) => {
       const purchaseIds = db.transaction(() => {
         const ids = [];
         const insertPurchase = db.prepare(`
-          INSERT INTO purchases (shop_id, user_id, purchase_date, item_id, qty, cost_price_at_purchase, supplier, total_amount)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO purchases (shop_id, user_id, purchase_date, item_id, qty, cost_price_at_purchase, supplier, total_amount, receipt_path)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const updateStock = db.prepare(`
           UPDATE items SET stock_qty = stock_qty + ?, cost_price = ?, updated_at = datetime('now') WHERE id = ?
@@ -85,7 +120,8 @@ router.post('/', (req, res) => {
             quantity,
             cost,
             lineSupplier,
-            totalAmount
+            totalAmount,
+            receiptPath
           );
 
           updateStock.run(quantity, cost, line.item_id);
@@ -120,8 +156,8 @@ router.post('/', (req, res) => {
 
   const createPurchase = db.transaction(() => {
     const result = db.prepare(`
-      INSERT INTO purchases (shop_id, user_id, purchase_date, item_id, qty, cost_price_at_purchase, supplier, total_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO purchases (shop_id, user_id, purchase_date, item_id, qty, cost_price_at_purchase, supplier, total_amount, receipt_path)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shopId,
       user?.id,
@@ -130,7 +166,8 @@ router.post('/', (req, res) => {
       quantity,
       cost,
       supplier || item.supplier,
-      totalAmount
+      totalAmount,
+      receiptPath
     );
 
     db.prepare(`
@@ -146,6 +183,32 @@ router.post('/', (req, res) => {
   `).get(purchaseId);
 
   res.status(201).json(purchase);
+});
+
+router.post('/:id/receipt', receiptUpload.single('receipt'), (req, res) => {
+  const db = getDb();
+  const shopId = getShopId();
+  const purchaseId = parseInt(req.params.id, 10);
+
+  const existing = db.prepare('SELECT * FROM purchases WHERE id = ? AND shop_id = ?').get(purchaseId, shopId);
+  if (!existing) return res.status(404).json({ error: 'Purchase not found' });
+  if (!req.file) return res.status(400).json({ error: 'Receipt file is required' });
+
+  const receiptPath = receiptPathFromFile(req.file);
+
+  if (existing.receipt_path) {
+    const oldFile = path.join(config.uploadsDir, existing.receipt_path.replace(/^\/uploads\//, ''));
+    try { fs.unlinkSync(oldFile); } catch { /* ignore */ }
+  }
+
+  db.prepare('UPDATE purchases SET receipt_path = ? WHERE id = ? AND shop_id = ?').run(receiptPath, purchaseId, shopId);
+
+  const purchase = db.prepare(`
+    SELECT p.*, i.name as item_name, i.category, i.unit
+    FROM purchases p JOIN items i ON i.id = p.item_id WHERE p.id = ?
+  `).get(purchaseId);
+
+  res.json(purchase);
 });
 
 router.put('/:id', (req, res) => {
@@ -234,6 +297,11 @@ router.delete('/:id', (req, res) => {
 
       db.prepare('DELETE FROM purchases WHERE id = ? AND shop_id = ?').run(purchaseId, shopId);
     })();
+
+    if (existing.receipt_path) {
+      const oldFile = path.join(config.uploadsDir, existing.receipt_path.replace(/^\/uploads\//, ''));
+      try { fs.unlinkSync(oldFile); } catch { /* ignore */ }
+    }
 
     res.json({ message: 'Purchase deleted and stock adjusted' });
   } catch (err) {

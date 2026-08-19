@@ -5,16 +5,28 @@ import { api, formatINR, formatDateTime } from '../api/client';
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     api.getDashboard()
       .then(setData)
-      .catch(console.error)
+      .catch((err) => setError(err.message || 'Failed to load dashboard'))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="empty-state">Loading dashboard...</div>;
-  if (!data) return <div className="alert alert-error">Failed to load dashboard</div>;
+  if (!data) {
+    return (
+      <div className="alert alert-error">
+        {error || 'Failed to load dashboard'}
+        {error?.toLowerCase().includes('license') && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <Link to="/license" className="btn btn-primary btn-sm">Activate License</Link>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>

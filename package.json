@@ -16,7 +16,10 @@
     "electron:build:win": "npm run build:frontend && npx electron-builder --win nsis",
     "generate:icon": "node scripts/generate-icon.js",
     "export:context": "node scripts/export-advisor-context.js",
-    "export:context:file": "node scripts/export-advisor-context.js --out docs/marketing/latest-context.json"
+    "export:context:file": "node scripts/export-advisor-context.js --out docs/marketing/latest-context.json",
+    "license:setup": "node scripts/setup-license-keys.js",
+    "license:generate": "node scripts/generate-license.js",
+    "license:install": "node scripts/install-license.js"
   },
   "build": {
     "appId": "com.vidhi.vimms",

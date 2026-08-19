@@ -2,11 +2,18 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { getDb } from '../db/database.js';
 import { signToken } from '../middleware/auth.js';
+import { isLicensed } from '../services/licenseService.js';
 import { config } from '../config.js';
 
 const router = Router();
 
 router.post('/login', (req, res) => {
+  if (!isLicensed()) {
+    return res.status(403).json({
+      error: 'Activate your VIMMS license before logging in.',
+      code: 'LICENSE_REQUIRED',
+    });
+  }
   const { pin, password } = req.body;
   const db = getDb();
 

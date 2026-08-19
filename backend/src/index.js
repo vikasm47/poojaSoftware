@@ -4,9 +4,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase } from './db/database.js';
 import { authMiddleware } from './middleware/auth.js';
+import { licenseMiddleware } from './middleware/license.js';
 import { config } from './config.js';
+import { getLicenseStatus } from './services/licenseService.js';
 
 import authRoutes from './routes/auth.js';
+import licenseRoutes from './routes/license.js';
 import itemsRoutes from './routes/items.js';
 import salesRoutes from './routes/sales.js';
 import purchasesRoutes from './routes/purchases.js';
@@ -26,18 +29,29 @@ app.use('/uploads', express.static(config.uploadsDir));
 app.use(express.static(frontendDist));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', shop: config.shopName });
+  const license = getLicenseStatus();
+  res.json({
+    status: 'ok',
+    shop: config.shopName,
+    version: '1.0.0',
+    capabilities: ['admin', 'advisor', 'backup', 'license'],
+    license: {
+      valid: license.valid,
+      needsActivation: license.needsActivation,
+    },
+  });
 });
 
+app.use('/api/license', licenseRoutes);
 app.use('/api/auth', authRoutes);
 
-app.use('/api/items', authMiddleware, itemsRoutes);
-app.use('/api/sales', authMiddleware, salesRoutes);
-app.use('/api/purchases', authMiddleware, purchasesRoutes);
-app.use('/api/reports', authMiddleware, reportsRoutes);
-app.use('/api/advisor', authMiddleware, advisorRoutes);
-app.use('/api/backup', authMiddleware, backupRoutes);
-app.use('/api/admin', authMiddleware, adminRoutes);
+app.use('/api/items', licenseMiddleware, authMiddleware, itemsRoutes);
+app.use('/api/sales', licenseMiddleware, authMiddleware, salesRoutes);
+app.use('/api/purchases', licenseMiddleware, authMiddleware, purchasesRoutes);
+app.use('/api/reports', licenseMiddleware, authMiddleware, reportsRoutes);
+app.use('/api/advisor', licenseMiddleware, authMiddleware, advisorRoutes);
+app.use('/api/backup', licenseMiddleware, authMiddleware, backupRoutes);
+app.use('/api/admin', licenseMiddleware, authMiddleware, adminRoutes);
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();

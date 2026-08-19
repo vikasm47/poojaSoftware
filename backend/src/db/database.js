@@ -170,6 +170,8 @@ export async function initDatabase() {
       discount REAL NOT NULL DEFAULT 0,
       payment_mode TEXT NOT NULL DEFAULT 'cash',
       total_amount REAL NOT NULL DEFAULT 0,
+      customer_name TEXT,
+      customer_address TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (shop_id) REFERENCES shops(id),
       FOREIGN KEY (user_id) REFERENCES users(id)
@@ -196,6 +198,7 @@ export async function initDatabase() {
       cost_price_at_purchase REAL NOT NULL,
       supplier TEXT,
       total_amount REAL NOT NULL,
+      receipt_path TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (shop_id) REFERENCES shops(id),
       FOREIGN KEY (user_id) REFERENCES users(id),
@@ -246,9 +249,26 @@ export async function initDatabase() {
   `);
 
   persistDatabase();
+  runMigrations();
   seedDefaultData();
   seedCategories();
   return db;
+}
+
+function runMigrations() {
+  const migrations = [
+    'ALTER TABLE sales ADD COLUMN customer_name TEXT',
+    'ALTER TABLE sales ADD COLUMN customer_address TEXT',
+    'ALTER TABLE purchases ADD COLUMN receipt_path TEXT',
+  ];
+  for (const sql of migrations) {
+    try {
+      db.exec(sql);
+    } catch {
+      // column already exists
+    }
+  }
+  persistDatabase();
 }
 
 function seedCategories() {

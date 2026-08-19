@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { api, downloadWithAuth } from '../api/client';
-import { APP_FULL_NAME, APP_NAME, APP_VERSION } from '../config/branding';
+import { Link } from 'react-router-dom';
+import { api, downloadWithAuth } from '../api/client';import { APP_FULL_NAME, APP_NAME, APP_VERSION } from '../config/branding';
 
 export default function Settings() {
   const [shop, setShop] = useState({ name: '', address: '', phone: '' });
+  const [license, setLicense] = useState(null);
   const [pinForm, setPinForm] = useState({ currentPin: '', newPin: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.getShop().then(setShop).catch(console.error);
+    api.getLicenseStatus().then(setLicense).catch(console.error);
   }, []);
 
   async function saveShop(e) {
@@ -106,6 +108,23 @@ export default function Settings() {
             Download a backup of your entire shop database. Store it safely on USB or cloud storage.
           </p>
           <button className="btn btn-secondary" onClick={backupData}>Download Backup (.db)</button>
+        </div>
+
+        <div className="card">
+          <h2 className="card-title">License</h2>
+          {license?.valid ? (
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              <p><span className="badge badge-ok">Active</span></p>
+              <p>Licensed to: <strong>{license.holder}</strong></p>
+              <p>Machine ID: {license.machineId}</p>
+              <p>Expires: {license.expiresAt ? license.expiresAt.slice(0, 10) : 'Never'}</p>
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              Not activated yet.
+            </p>
+          )}
+          <Link to="/license" className="btn btn-secondary" style={{ marginTop: '1rem' }}>Manage License</Link>
         </div>
 
         <div className="card">
